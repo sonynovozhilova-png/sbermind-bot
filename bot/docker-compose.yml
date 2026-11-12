@@ -1,0 +1,29 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: sbermind-ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "127.0.0.1:11434:11434"
+    restart: unless-stopped
+
+  webserver:
+    build:
+      context: ./webserver
+    container_name: sbermind-webserver
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - ACCESS_TOKEN=sbermind2026
+      - MODEL_NAME=qwen2.5:1.5b
+      - DATABASE_URL=${DATABASE_URL}
+      - FERNET_KEY=${FERNET_KEY}
+
+    ports:
+      - "0.0.0.0:5000:5000"
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
