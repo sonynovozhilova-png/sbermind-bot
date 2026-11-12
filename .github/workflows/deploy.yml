@@ -1,0 +1,40 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ] # Запускать при пуше в ветку main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 1. СБОРКА И ПУШ ОБРАЗА В DOCKER HUB (CI)
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./webserver
+        push: true
+        tags: ${{ secrets.DOCKER_USERNAME }}/sbermind-webserver:latest
+
+    # 2. ДЕПЛОЙ НА VPS (CD)
+    - name: Deploy to VPS
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USERNAME }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        script: |
+          cd /root/sbermind-bot
+          # Обновляем образ и перезапускаем только веб-сервер
+          docker compose pull webserver
+          docker compose up -d --no-deps webserver
